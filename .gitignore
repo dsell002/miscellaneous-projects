@@ -1,0 +1,36 @@
+# Ignore binary files and executables
+*.exe
+*.dll
+*.lib
+*.a
+
+# Ignore build artifacts
+*.o
+*.obj
+
+# Ignore Visual Studio Code settings and task files
+.vscode/
+
+# Ignore compiled Python files
+*.pyc
+__pycache__/
+
+# Ignore log files
+*.log
+
+# Ignore temporary files
+*.tmp
+*.temp
+
+# Ignore backup files
+*.bak
+*.old
+*.orig
+
+# Ignore build directories
+build/
+bin/
+
+# Ignore system files
+.DS_Store
+Thumbs.db
