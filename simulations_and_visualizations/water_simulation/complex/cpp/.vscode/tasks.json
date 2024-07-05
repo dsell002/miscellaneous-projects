@@ -1,0 +1,32 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "build",
+            "type": "shell",
+            "command": "g++",
+            "args": [
+                "-g",
+                "${workspaceFolder}/main.cpp",
+                "-o",
+                "${workspaceFolder}/main.exe",
+                "-I${workspaceFolder}/include",
+                "-IC:/mingw64/x86_64-w64-mingw32/include", // MinGW include path
+                "-IC:/glm", // GLM include path
+                "-L${workspaceFolder}/lib",
+                "-LC:/mingw64/x86_64-w64-mingw32/lib", // MinGW lib path
+                "-DGLFW_INCLUDE_NONE", // Ensure GLFW doesn't include OpenGL headers
+                "-lglew32",
+                "-lglfw3",
+                "-lopengl32",
+                "-lgdi32", // Add gdi32 library
+                "-luser32" // Add user32 library
+            ],
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+            "problemMatcher": ["$gcc"]
+        }
+    ]
+}
