@@ -88,7 +88,7 @@ void checkOpenGLError(const std::string& errorMessage) {
 
 // Camera settings
 glm::vec3 cameraPos(0.0f, 0.0f, 3.0f);
-glm::vec3 cameraFront(0.0f, 0.0f, -1.0f);
+glm::vec3 cameraTarget(0.0f, 0.0f, 0.0f);
 glm::vec3 cameraUp(0.0f, 1.0f, 0.0f);
 float yaw = -90.0f;
 float pitch = 0.0f;
@@ -99,6 +99,7 @@ float cameraSpeed = 0.05f;
 float sensitivity = 0.1f;
 bool leftButtonPressed = false;
 bool rightButtonPressed = false;
+float distanceToModel = 3.0f;
 
 // Mouse callback function to handle camera rotation
 void mouse_callback(GLFWwindow* window, double xpos, double ypos) {
@@ -126,14 +127,10 @@ void mouse_callback(GLFWwindow* window, double xpos, double ypos) {
         if (pitch < -89.0f)
             pitch = -89.0f;
 
-        glm::vec3 front;
-        front.x = cos(glm::radians(yaw)) * cos(glm::radians(pitch));
-        front.y = sin(glm::radians(pitch));
-        front.z = sin(glm::radians(yaw)) * cos(glm::radians(pitch));
-        cameraFront = glm::normalize(front);
-    } else if (rightButtonPressed) {
-        cameraPos += glm::normalize(glm::cross(cameraFront, cameraUp)) * xoffset * cameraSpeed;
-        cameraPos += cameraUp * yoffset * cameraSpeed;
+        // Update camera position based on spherical coordinates
+        cameraPos.x = cameraTarget.x + distanceToModel * cos(glm::radians(yaw)) * cos(glm::radians(pitch));
+        cameraPos.y = cameraTarget.y + distanceToModel * sin(glm::radians(pitch));
+        cameraPos.z = cameraTarget.z + distanceToModel * sin(glm::radians(yaw)) * cos(glm::radians(pitch));
     }
 }
 
@@ -301,7 +298,7 @@ int main() {
         }
 
         // Calculate view and projection matrices
-        glm::mat4 view = glm::lookAt(cameraPos, cameraPos + cameraFront, cameraUp);
+        glm::mat4 view = glm::lookAt(cameraPos, cameraTarget, cameraUp);
         glm::mat4 projection = glm::perspective(glm::radians(fov), (float)width / (float)height, 0.1f, 100.0f);
 
         // Pass view and projection matrices to the shader
