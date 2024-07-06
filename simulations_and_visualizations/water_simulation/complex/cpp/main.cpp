@@ -9,9 +9,13 @@
 #include <string>
 
 // Include GLM for matrix transformations
-#include "glm/glm.hpp"
-#include "glm/gtc/matrix_transform.hpp"
-#include "glm/gtc/type_ptr.hpp"
+#include "C:/glm/glm/glm.hpp"
+#include "C:/glm/glm/gtc/matrix_transform.hpp"
+#include "C:/glm/glm/gtc/type_ptr.hpp"
+
+// Include stb_image for loading textures
+#define STB_IMAGE_IMPLEMENTATION
+#include "C:/stb/stb_image.h"
 
 // Function to read shader code from a file
 std::string readShaderSource(const std::string& filePath) {
@@ -76,6 +80,68 @@ GLuint createShaderProgram(const std::string& vertexPath, const std::string& fra
     glDeleteShader(fragmentShader);
 
     return program;
+}
+
+// Function to load texture
+GLuint loadTexture(const char* path) {
+    GLuint textureID;
+    glGenTextures(1, &textureID);
+    glBindTexture(GL_TEXTURE_2D, textureID);
+
+    // Set texture parameters
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+    int width, height, nrChannels;
+    unsigned char* data = stbi_load(path, &width, &height, &nrChannels, 0);
+    if (data) {
+        GLenum format;
+        if (nrChannels == 1)
+            format = GL_RED;
+        else if (nrChannels == 3)
+            format = GL_RGB;
+        else if (nrChannels == 4)
+            format = GL_RGBA;
+
+        glTexImage2D(GL_TEXTURE_2D, 0, format, width, height, 0, format, GL_UNSIGNED_BYTE, data);
+        glGenerateMipmap(GL_TEXTURE_2D);
+        std::cout << "Loaded texture: " << path << " Width: " << width << " Height: " << height << " Channels: " << nrChannels << std::endl;
+    } else {
+        std::cerr << "Failed to load texture: " << path << std::endl;
+    }
+    stbi_image_free(data);
+
+    return textureID;
+}
+
+// Function to load cubemap
+GLuint loadCubeMap(const std::string& path) {
+    GLuint textureID;
+    glGenTextures(1, &textureID);
+    glBindTexture(GL_TEXTURE_CUBE_MAP, textureID);
+
+    int width, height, nrChannels;
+    unsigned char* data = stbi_load(path.c_str(), &width, &height, &nrChannels, 0);
+    if (data) {
+        for (unsigned int i = 0; i < 6; i++) {
+            glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
+        }
+        stbi_image_free(data);
+        std::cout << "Loaded cubemap texture: " << path << " Width: " << width << " Height: " << height << " Channels: " << nrChannels << std::endl;
+    } else {
+        std::cerr << "Cubemap texture failed to load at path: " << path << std::endl;
+        stbi_image_free(data);
+    }
+
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+
+    return textureID;
 }
 
 // Check for OpenGL errors
@@ -210,6 +276,19 @@ int main() {
         return -1;
     }
 
+    GLuint skyboxShaderProgram = createShaderProgram("skybox_vertex_shader.glsl", "skybox_fragment_shader.glsl");
+    if (skyboxShaderProgram == 0) {
+        std::cerr << "Failed to create skybox shader program" << std::endl;
+        return -1;
+    }
+
+    // Load textures
+    GLuint normalMap = loadTexture("normal_map.jpg");
+    std::cout << "Normal map texture ID: " << normalMap << std::endl;
+
+    GLuint skybox = loadCubeMap("skybox/top.jpg");
+    std::cout << "Skybox texture ID: " << skybox << std::endl;
+
     // Define a grid of vertices for the water surface
     const int gridSize = 200;
     std::vector<float> vertices;
@@ -236,6 +315,9 @@ int main() {
             indices.push_back(start + gridSize + 1);
         }
     }
+
+    std::cout << "Vertices size: " << vertices.size() << std::endl;
+    std::cout << "Indices size: " << indices.size() << std::endl;
 
     // Create VBO, VAO, and EBO
     GLuint VBO, VAO, EBO;
@@ -272,43 +354,101 @@ int main() {
     glfwSetMouseButtonCallback(window, mouse_button_callback);
     glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 
+    // Skybox vertices
+    float skyboxVertices[] = {
+        // positions          
+        -1.0f,  1.0f, -1.0f,
+        -1.0f, -1.0f, -1.0f,
+         1.0f, -1.0f, -1.0f,
+         1.0f, -1.0f, -1.0f,
+         1.0f,  1.0f, -1.0f,
+        -1.0f,  1.0f, -1.0f,
+
+        -1.0f, -1.0f,  1.0f,
+        -1.0f, -1.0f, -1.0f,
+        -1.0f,  1.0f, -1.0f,
+        -1.0f,  1.0f, -1.0f,
+        -1.0f,  1.0f,  1.0f,
+        -1.0f, -1.0f,  1.0f,
+
+         1.0f, -1.0f, -1.0f,
+         1.0f, -1.0f,  1.0f,
+         1.0f,  1.0f,  1.0f,
+         1.0f,  1.0f,  1.0f,
+         1.0f,  1.0f, -1.0f,
+         1.0f, -1.0f, -1.0f,
+
+        -1.0f, -1.0f,  1.0f,
+        -1.0f,  1.0f,  1.0f,
+         1.0f,  1.0f,  1.0f,
+         1.0f,  1.0f,  1.0f,
+         1.0f, -1.0f,  1.0f,
+        -1.0f, -1.0f,  1.0f,
+
+        -1.0f,  1.0f, -1.0f,
+         1.0f,  1.0f, -1.0f,
+         1.0f,  1.0f,  1.0f,
+         1.0f,  1.0f,  1.0f,
+        -1.0f,  1.0f,  1.0f,
+        -1.0f,  1.0f, -1.0f,
+
+        -1.0f, -1.0f, -1.0f,
+        -1.0f, -1.0f,  1.0f,
+         1.0f, -1.0f, -1.0f,
+         1.0f, -1.0f, -1.0f,
+        -1.0f, -1.0f,  1.0f,
+         1.0f, -1.0f,  1.0f
+    };
+
+    // Setup skybox VAO
+    GLuint skyboxVAO, skyboxVBO;
+    glGenVertexArrays(1, &skyboxVAO);
+    glGenBuffers(1, &skyboxVBO);
+    glBindVertexArray(skyboxVAO);
+    glBindBuffer(GL_ARRAY_BUFFER, skyboxVBO);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(skyboxVertices), &skyboxVertices, GL_STATIC_DRAW);
+    glEnableVertexAttribArray(0);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
+
     // Main loop
     while (!glfwWindowShouldClose(window)) {
         // Render
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-        // Use shader program
+        // Render the skybox
+        glDepthFunc(GL_LEQUAL);  // Change depth function so depth test passes when values are equal to depth buffer's content
+        glUseProgram(skyboxShaderProgram);
+        glm::mat4 view = glm::mat4(glm::mat3(glm::lookAt(cameraPos, cameraTarget, cameraUp))); // Remove any translation component of the view matrix
+        glm::mat4 projection = glm::perspective(glm::radians(fov), (float)width / (float)height, 0.1f, 100.0f);
+        glUniformMatrix4fv(glGetUniformLocation(skyboxShaderProgram, "view"), 1, GL_FALSE, glm::value_ptr(view));
+        glUniformMatrix4fv(glGetUniformLocation(skyboxShaderProgram, "projection"), 1, GL_FALSE, glm::value_ptr(projection));
+
+        // skybox cube
+        glBindVertexArray(skyboxVAO);
+        glBindTexture(GL_TEXTURE_CUBE_MAP, skybox);
+        glDrawArrays(GL_TRIANGLES, 0, 36);
+        glBindVertexArray(0);
+        glDepthFunc(GL_LESS); // Set depth function back to default
+
+        // Render the water surface
         glUseProgram(shaderProgram);
 
         // Update the time uniform
         float timeValue = glfwGetTime();
-        int timeLocation = glGetUniformLocation(shaderProgram, "time");
-        if (timeLocation != -1) {
-            glUniform1f(timeLocation, timeValue);
-        } else {
-            std::cerr << "Failed to get 'time' uniform location" << std::endl;
-        }
+        glUniform1f(glGetUniformLocation(shaderProgram, "time"), timeValue);
 
         // Set the light direction uniform
-        int lightDirLocation = glGetUniformLocation(shaderProgram, "lightDir");
-        if (lightDirLocation != -1) {
-            glUniform3f(lightDirLocation, 0.0f, 1.0f, 1.0f); // Example light direction
-        } else {
-            std::cerr << "Failed to get 'lightDir' uniform location" << std::endl;
-        }
+        glUniform3f(glGetUniformLocation(shaderProgram, "lightDir"), 0.0f, 1.0f, 1.0f); // Example light direction
 
-        // Calculate view and projection matrices
-        glm::mat4 view = glm::lookAt(cameraPos, cameraTarget, cameraUp);
-        glm::mat4 projection = glm::perspective(glm::radians(fov), (float)width / (float)height, 0.1f, 100.0f);
+        // Calculate view and projection matrices for water
+        view = glm::lookAt(cameraPos, cameraTarget, cameraUp);
+        projection = glm::perspective(glm::radians(fov), (float)width / (float)height, 0.1f, 100.0f);
+        glUniformMatrix4fv(glGetUniformLocation(shaderProgram, "view"), 1, GL_FALSE, glm::value_ptr(view));
+        glUniformMatrix4fv(glGetUniformLocation(shaderProgram, "projection"), 1, GL_FALSE, glm::value_ptr(projection));
 
-        // Pass view and projection matrices to the shader
-        int viewLoc = glGetUniformLocation(shaderProgram, "view");
-        int projLoc = glGetUniformLocation(shaderProgram, "projection");
-        glUniformMatrix4fv(viewLoc, 1, GL_FALSE, glm::value_ptr(view));
-        glUniformMatrix4fv(projLoc, 1, GL_FALSE, glm::value_ptr(projection));
-
-        // Draw the grid
+        // Draw the water surface
         glBindVertexArray(VAO);
+        glBindTexture(GL_TEXTURE_2D, normalMap); // Bind the normal map texture
         glDrawElements(GL_TRIANGLES, indices.size(), GL_UNSIGNED_INT, 0);
         glBindVertexArray(0);
 
@@ -318,6 +458,8 @@ int main() {
     }
 
     // Cleanup
+    glDeleteVertexArrays(1, &skyboxVAO);
+    glDeleteBuffers(1, &skyboxVBO);
     glDeleteVertexArrays(1, &VAO);
     glDeleteBuffers(1, &VBO);
     glDeleteBuffers(1, &EBO);

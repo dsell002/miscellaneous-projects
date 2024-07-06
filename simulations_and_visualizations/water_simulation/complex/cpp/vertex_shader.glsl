@@ -13,7 +13,7 @@ void main()
 {
     vec3 pos = aPos;
 
-    // Combine multiple wave functions
+    // Use Perlin noise or a more complex wave function for better realism
     float wave1 = sin(pos.x * 10.0 + time * 4.0) * 0.05;
     float wave2 = cos(pos.y * 15.0 + time * 2.5) * 0.05;
     float wave3 = sin(pos.x * 20.0 + pos.y * 20.0 + time * 3.0) * 0.03;
